@@ -1,6 +1,7 @@
 from decimal import Decimal
-from turtle import st
 from django.db import models
+
+from django.conf import settings
 
 
 class Product(models.Model):
@@ -41,14 +42,24 @@ class Order(models.Model):
     
     #custom methods over here:
     def get_total(self) -> Decimal:
+        """
+        Returns the total price of the order
+        """
         total = 0
         for detail in self.details.all():
             total += detail.get_subtotal()
         return total
     
     def get_total_usd(self) -> Decimal:
-        usd_value = 200 #ToDo: Use api. Issued: https://github.com/EVillasuso/clicoh_django/issues/2
-        return self.get_total * usd_value
+        """
+        Returns the total price of the order in USD.
+        Takes the current price in ARS from get_total() and converts it to USD
+        Uses utils.USD_FETCHER to fetch the current 'Dolar Blue' price
+        """
+        usd_value = settings.USD_FETCHER.get_dolar_blue()
+        return self.get_total() / usd_value
+    
+    
 class OrderDetail(models.Model):
     product = models.ForeignKey(
         Product,
@@ -61,19 +72,17 @@ class OrderDetail(models.Model):
         on_delete=models.CASCADE, 
         related_name='details'
         )
-    price = models.DecimalField(
-        verbose_name='Price', 
-        max_digits=10, 
-        decimal_places=2,
-        help_text='The price of the selected product at the moment of the order'
-        ) # Note: this field is not in the original model, but it is added because is needed to maintain the original price at the order time. A 'factura' cannot vary their own total price in time, must be maintained.
     
     def __str__(self) -> str:
         return f'{self.product.name} - {self.quantity}'
     
     class Meta:
         ordering = ('-order', '-pk')
+        unique_together = ('product', 'order') # grants that the same order cant contains 2 details for the same product
     
     #custom methods over here:
     def get_subtotal(self) -> Decimal:
-        return self.price * self.quantity
+        """
+        Returns the subtotal of the order detail (order line) in Decimal.
+        """
+        return self.product.price * self.quantity
