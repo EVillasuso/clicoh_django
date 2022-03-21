@@ -1,3 +1,4 @@
+import django_heroku
 """
 Django settings for clicoh_django project.
 
@@ -137,3 +138,6 @@ REST_FRAMEWORK = {
 
 # Store the USD Fetcher object in settings to make it accesible for all the apps
 USD_FETCHER = UsdFetcher()
+
+# Heroku config
+django_heroku.settings(locals())
