@@ -59,6 +59,7 @@ class OrderSerializer(serializers.ModelSerializer):
             
         return instance
     
+    @transaction.atomic #if an error returned (i.e. constraint fail) the transaction will be rolled back
     def create(self, validated_data):
         details_data = validated_data.pop('details')
         if len(details_data)==0: # all orders must have at least one detail
@@ -69,7 +70,12 @@ class OrderSerializer(serializers.ModelSerializer):
             if product.stock >= detail['quantity']:
                 product.stock -= detail['quantity']
                 product.save()
-                OrderDetail.objects.create(**detail, order=order)
+                try:
+                    OrderDetail.objects.create(**detail, order=order)
+                except Exception as e:
+                    # control the violation of the UNIQUE constraint between order and product (and other ORM errors)
+                    # Note: @transaction.atomic will rollback the stock modification if an error is raised
+                    raise ValidationError(f'Error while saving the order: {e}')
             else:
                 raise ValidationError(f'Product {product.name} out of stock')
         return order
