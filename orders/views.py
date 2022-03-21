@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 
 from orders.models import Order, Product
@@ -6,11 +7,13 @@ from orders.serializers import OrderSerializer, ProductSerializer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     search_fields = ['name']
 
 class OrderViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     search_fields = ['id', 'time_date']
